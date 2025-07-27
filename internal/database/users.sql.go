@@ -69,9 +69,9 @@ RETURNING
 `
 
 type InsertUserParams struct {
-	ID           uuid.UUID
-	Email        string
-	PasswordHash string
+	ID           uuid.UUID `json:"id"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"password_hash"`
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (AuthUser, error) {

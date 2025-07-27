@@ -10,19 +10,22 @@ import (
 	"github.com/AlexKhomenko00/hotel-system/internal/config"
 	"github.com/AlexKhomenko00/hotel-system/internal/database"
 	"github.com/AlexKhomenko00/hotel-system/internal/server/jwt"
+	"github.com/go-playground/validator/v10"
 	_ "github.com/joho/godotenv/autoload"
 )
 
 type Server struct {
-	port    int
-	jwt     jwt.Authenticator
-	db      database.Service
-	queries database.Queries
-	cfg     *config.Config
+	port      int
+	jwt       jwt.Authenticator
+	db        database.Service
+	queries   database.Queries
+	cfg       *config.Config
+	validator validator.Validate
 }
 
 func NewServer() *http.Server {
-	cfg := config.GetConfig()
+	validator := validator.New()
+	cfg := config.GetConfig(validator)
 	dbService, err := database.Create(cfg)
 	if err != nil {
 		log.Fatal("Failed to initialize database %w", err)
@@ -31,11 +34,12 @@ func NewServer() *http.Server {
 	port, _ := strconv.Atoi(cfg.PORT)
 	jwtAuth := jwt.NewAuthenticator(cfg.JWTSecret)
 	NewServer := &Server{
-		port:    port,
-		jwt:     jwtAuth,
-		db:      dbService,
-		queries: *database.New(dbService.GetDB()),
-		cfg:     cfg,
+		port:      port,
+		jwt:       jwtAuth,
+		db:        dbService,
+		queries:   *database.New(dbService.GetDB()),
+		cfg:       cfg,
+		validator: *validator,
 	}
 
 	server := &http.Server{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/AlexKhomenko00/hotel-system/internal/hotel"
 	"github.com/AlexKhomenko00/hotel-system/internal/shared"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -12,6 +13,7 @@ import (
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
+	hotelSvc := hotel.New(&s.queries, s.validator)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
@@ -23,11 +25,26 @@ func (s *Server) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
+	r.Route("/hotel", func(r chi.Router) {
+		r.Post("/", hotelSvc.CreateHotelHandler)
+		r.Get("/{id}", hotelSvc.GetHotelHandler)
+		r.Put("/{id}", hotelSvc.UpdateHotelHandler)
+		r.Delete("/{id}", hotelSvc.DeleteHotelHandler)
+	})
+
 	r.Group(func(r chi.Router) {
 		r.Use(s.jwt.Verifier())
 		r.Use(s.jwtAuthMiddleware)
 
 		r.Get("/verify", verifyTokenHandler)
+
+		r.Route("/hotel", func(r chi.Router) {
+			r.Post("/", hotelSvc.CreateHotelHandler)
+			r.Get("/{id}", hotelSvc.GetHotelHandler)
+			r.Put("/{id}", hotelSvc.UpdateHotelHandler)
+			r.Delete("/{id}", hotelSvc.DeleteHotelHandler)
+		})
+
 	})
 
 	r.Group(func(r chi.Router) {

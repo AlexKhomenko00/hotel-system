@@ -23,14 +23,14 @@ type Config struct {
 
 var config *Config
 
-func GetConfig() *Config {
+func GetConfig(validator *validator.Validate) *Config {
 	if config == nil {
-		config = loadAndValidateConfig()
+		config = loadAndValidateConfig(validator)
 	}
 	return config
 }
 
-func loadAndValidateConfig() *Config {
+func loadAndValidateConfig(validator *validator.Validate) *Config {
 	cfg := &Config{
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		PORT:        os.Getenv("PORT"),
@@ -41,7 +41,7 @@ func loadAndValidateConfig() *Config {
 		DB_PASSWORD: os.Getenv("BLUEPRINT_DB_PASSWORD"),
 		DB_SCHEMA:   os.Getenv("BLUEPRINT_DB_SCHEMA"),
 		DB_SSLMODE:  os.Getenv("BLUEPRINT_DB_SSLMODE"),
-		validator:   validator.New(),
+		validator:   validator,
 	}
 
 	if err := cfg.validator.Struct(cfg); err != nil {
@@ -49,8 +49,4 @@ func loadAndValidateConfig() *Config {
 	}
 
 	return cfg
-}
-
-func (c *Config) Validator() *validator.Validate {
-	return c.validator
 }

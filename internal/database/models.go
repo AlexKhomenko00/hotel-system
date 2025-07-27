@@ -6,15 +6,91 @@ package database
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 
 	"github.com/google/uuid"
 )
 
+type BookingRoomStatus string
+
+const (
+	BookingRoomStatusAvailable   BookingRoomStatus = "available"
+	BookingRoomStatusUnavailable BookingRoomStatus = "unavailable"
+	BookingRoomStatusMaintenance BookingRoomStatus = "maintenance"
+)
+
+func (e *BookingRoomStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BookingRoomStatus(s)
+	case string:
+		*e = BookingRoomStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BookingRoomStatus: %T", src)
+	}
+	return nil
+}
+
+type NullBookingRoomStatus struct {
+	BookingRoomStatus BookingRoomStatus `json:"booking_room_status"`
+	Valid             bool              `json:"valid"` // Valid is true if BookingRoomStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBookingRoomStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.BookingRoomStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BookingRoomStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBookingRoomStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BookingRoomStatus), nil
+}
+
 type AuthUser struct {
-	ID           uuid.UUID
-	Email        string
-	PasswordHash string
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
-	DeletedAt    sql.NullTime
+	ID           uuid.UUID    `json:"id"`
+	Email        string       `json:"email"`
+	PasswordHash string       `json:"password_hash"`
+	CreatedAt    sql.NullTime `json:"created_at"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
+	DeletedAt    sql.NullTime `json:"deleted_at"`
+}
+
+type BookingHotel struct {
+	ID        uuid.UUID    `json:"id"`
+	Name      string       `json:"name"`
+	Location  string       `json:"location"`
+	CreatedAt sql.NullTime `json:"created_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	DeletedAt sql.NullTime `json:"deleted_at"`
+}
+
+type BookingRoom struct {
+	ID          uuid.UUID         `json:"id"`
+	HotelID     uuid.UUID         `json:"hotel_id"`
+	RoomTypeID  uuid.UUID         `json:"room_type_id"`
+	Status      BookingRoomStatus `json:"status"`
+	Name        string            `json:"name"`
+	Description sql.NullString    `json:"description"`
+	Number      int32             `json:"number"`
+	Floor       int32             `json:"floor"`
+	CreatedAt   sql.NullTime      `json:"created_at"`
+	UpdatedAt   sql.NullTime      `json:"updated_at"`
+}
+
+type BookingRoomType struct {
+	ID          uuid.UUID      `json:"id"`
+	HotelID     uuid.UUID      `json:"hotel_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
 }

@@ -48,7 +48,7 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.cfg.Validator().Struct(body); err != nil {
+	if err := s.validator.Struct(body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -107,7 +107,7 @@ func (s *Server) registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	resEncoder := json.NewEncoder(w)
 
-	if err := s.cfg.Validator().Struct(&body); err != nil {
+	if err := s.validator.Struct(&body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		resEncoder.Encode(shared.ErrorRes{
 			Message: fmt.Sprintf("Invalid body: %v", err.Error()),
