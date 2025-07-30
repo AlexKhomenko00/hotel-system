@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -40,6 +41,41 @@ func (q *Queries) CreateHotel(ctx context.Context, arg CreateHotelParams) (Booki
 	return i, err
 }
 
+const createRoomType = `-- name: CreateRoomType :one
+INSERT INTO
+	booking.room_types (id, hotel_id, name, description)
+VALUES
+	($1, $2, $3, $4)
+RETURNING
+	id, hotel_id, name, description, created_at, updated_at
+`
+
+type CreateRoomTypeParams struct {
+	ID          uuid.UUID      `json:"id"`
+	HotelID     uuid.UUID      `json:"hotel_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) CreateRoomType(ctx context.Context, arg CreateRoomTypeParams) (BookingRoomType, error) {
+	row := q.db.QueryRowContext(ctx, createRoomType,
+		arg.ID,
+		arg.HotelID,
+		arg.Name,
+		arg.Description,
+	)
+	var i BookingRoomType
+	err := row.Scan(
+		&i.ID,
+		&i.HotelID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteHotel = `-- name: DeleteHotel :exec
 UPDATE booking.hotels
 SET
@@ -51,6 +87,54 @@ WHERE
 func (q *Queries) DeleteHotel(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteHotel, id)
 	return err
+}
+
+const deleteRoomType = `-- name: DeleteRoomType :exec
+UPDATE booking.room_types
+SET
+	deleted_at = CURRENT_TIMESTAMP
+WHERE
+	id = $1
+	AND hotel_id = $2
+`
+
+type DeleteRoomTypeParams struct {
+	ID      uuid.UUID `json:"id"`
+	HotelID uuid.UUID `json:"hotel_id"`
+}
+
+func (q *Queries) DeleteRoomType(ctx context.Context, arg DeleteRoomTypeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteRoomType, arg.ID, arg.HotelID)
+	return err
+}
+
+const findRoomTypesByHotelIdAndName = `-- name: FindRoomTypesByHotelIdAndName :one
+SELECT
+	id, hotel_id, name, description, created_at, updated_at
+FROM
+	booking.room_types
+WHERE
+	hotel_id = $1
+	AND name = $2
+`
+
+type FindRoomTypesByHotelIdAndNameParams struct {
+	HotelID uuid.UUID `json:"hotel_id"`
+	Name    string    `json:"name"`
+}
+
+func (q *Queries) FindRoomTypesByHotelIdAndName(ctx context.Context, arg FindRoomTypesByHotelIdAndNameParams) (BookingRoomType, error) {
+	row := q.db.QueryRowContext(ctx, findRoomTypesByHotelIdAndName, arg.HotelID, arg.Name)
+	var i BookingRoomType
+	err := row.Scan(
+		&i.ID,
+		&i.HotelID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getHotelById = `-- name: GetHotelById :one
@@ -99,6 +183,35 @@ func (q *Queries) GetHotelByName(ctx context.Context, name string) (BookingHotel
 	return i, err
 }
 
+const getRoomTypeByIdAndHotelId = `-- name: GetRoomTypeByIdAndHotelId :one
+SELECT
+	id, hotel_id, name, description, created_at, updated_at
+FROM
+	booking.room_types
+WHERE
+	id = $1
+	AND hotel_id = $2
+`
+
+type GetRoomTypeByIdAndHotelIdParams struct {
+	ID      uuid.UUID `json:"id"`
+	HotelID uuid.UUID `json:"hotel_id"`
+}
+
+func (q *Queries) GetRoomTypeByIdAndHotelId(ctx context.Context, arg GetRoomTypeByIdAndHotelIdParams) (BookingRoomType, error) {
+	row := q.db.QueryRowContext(ctx, getRoomTypeByIdAndHotelId, arg.ID, arg.HotelID)
+	var i BookingRoomType
+	err := row.Scan(
+		&i.ID,
+		&i.HotelID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateHotel = `-- name: UpdateHotel :one
 UPDATE booking.hotels
 SET
@@ -107,7 +220,8 @@ SET
 	updated_at = CURRENT_TIMESTAMP
 WHERE
 	id = $1
-RETURNING id, name, location, created_at, updated_at, deleted_at
+RETURNING
+	id, name, location, created_at, updated_at, deleted_at
 `
 
 type UpdateHotelParams struct {
@@ -126,6 +240,45 @@ func (q *Queries) UpdateHotel(ctx context.Context, arg UpdateHotelParams) (Booki
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateRoomType = `-- name: UpdateRoomType :one
+UPDATE booking.room_types
+SET
+	name = $3,
+	description = $4,
+	updated_at = CURRENT_TIMESTAMP
+WHERE
+	id = $1
+	AND hotel_id = $2
+RETURNING
+	id, hotel_id, name, description, created_at, updated_at
+`
+
+type UpdateRoomTypeParams struct {
+	ID          uuid.UUID      `json:"id"`
+	HotelID     uuid.UUID      `json:"hotel_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) UpdateRoomType(ctx context.Context, arg UpdateRoomTypeParams) (BookingRoomType, error) {
+	row := q.db.QueryRowContext(ctx, updateRoomType,
+		arg.ID,
+		arg.HotelID,
+		arg.Name,
+		arg.Description,
+	)
+	var i BookingRoomType
+	err := row.Scan(
+		&i.ID,
+		&i.HotelID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

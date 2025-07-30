@@ -39,10 +39,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		r.Get("/verify", verifyTokenHandler)
 
 		r.Route("/hotel", func(r chi.Router) {
-			r.Post("/", hotelSvc.CreateHotelHandler)
-			r.Get("/{id}", hotelSvc.GetHotelHandler)
-			r.Put("/{id}", hotelSvc.UpdateHotelHandler)
-			r.Delete("/{id}", hotelSvc.DeleteHotelHandler)
+			registerHotelRoutes(r, hotelSvc)
+			registerRoomTypesRoutes(r, hotelSvc)
 		})
 
 	})
@@ -55,6 +53,22 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Get("/health", s.healthHandler)
 
 	return r
+}
+
+func registerHotelRoutes(r chi.Router, hotelSvc *hotel.HotelService) {
+	r.Post("/", hotelSvc.CreateHotelHandler)
+	r.Get("/{id}", hotelSvc.GetHotelHandler)
+	r.Put("/{id}", hotelSvc.UpdateHotelHandler)
+	r.Delete("/{id}", hotelSvc.DeleteHotelHandler)
+}
+
+func registerRoomTypesRoutes(r chi.Router, hotelSvc *hotel.HotelService) {
+	r.Route("/{hotelId}/rooms", func(r chi.Router) {
+		r.Post("/", hotelSvc.AddRoomTypeHandler)
+		r.Get("/{id}", hotelSvc.GetRoomTypeHandler)
+		r.Put("/{id}", hotelSvc.UpdateRoomTypeHandler)
+		r.Delete("/{id}", hotelSvc.DeleteRoomTypeHandler)
+	})
 }
 
 func verifyTokenHandler(w http.ResponseWriter, r *http.Request) {

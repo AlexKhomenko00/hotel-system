@@ -35,8 +35,8 @@ type service struct {
 }
 
 func Create(cfg *config.Config) (Service, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=%s",
-		cfg.DB_USERNAME, cfg.DB_PASSWORD, cfg.DB_HOST, cfg.DB_PORT, cfg.DB_DATABASE, cfg.DB_SSLMODE, cfg.DB_SCHEMA)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&application_name=hotel-system",
+		cfg.DB_USERNAME, cfg.DB_PASSWORD, cfg.DB_HOST, cfg.DB_PORT, cfg.DB_DATABASE, cfg.DB_SSLMODE)
 
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {

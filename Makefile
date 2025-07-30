@@ -61,4 +61,21 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+# Database migrations with goose
+migrate-up:
+	@echo "Running migrations..."
+	@set -a && . .env && set +a && cd sql/schema && goose postgres "host=localhost port=$${DB_PORT} user=$${DB_USERNAME} password=$${DB_PASSWORD} dbname=$${DB_DATABASE} sslmode=disable" up
+
+migrate-down:
+	@echo "Rolling back migrations..."
+	@set -a && . .env && set +a && cd sql/schema && goose postgres "host=localhost port=$${DB_PORT} user=$${DB_USERNAME} password=$${DB_PASSWORD} dbname=$${DB_DATABASE} sslmode=disable" down
+
+migrate-status:
+	@echo "Checking migration status..."
+	@set -a && . .env && set +a && cd sql/schema && goose postgres "host=localhost port=$${DB_PORT} user=$${DB_USERNAME} password=$${DB_PASSWORD} dbname=$${DB_DATABASE} sslmode=disable" status
+
+migrate-create: 
+	@echo "Creating new migration..."
+	@cd sql/schema && goose create "$(name)" sql
+
+.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status

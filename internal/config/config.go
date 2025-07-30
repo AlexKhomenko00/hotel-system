@@ -34,13 +34,13 @@ func loadAndValidateConfig(validator *validator.Validate) *Config {
 	cfg := &Config{
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		PORT:        os.Getenv("PORT"),
-		DB_HOST:     os.Getenv("BLUEPRINT_DB_HOST"),
-		DB_PORT:     os.Getenv("BLUEPRINT_DB_PORT"),
-		DB_DATABASE: os.Getenv("BLUEPRINT_DB_DATABASE"),
-		DB_USERNAME: os.Getenv("BLUEPRINT_DB_USERNAME"),
-		DB_PASSWORD: os.Getenv("BLUEPRINT_DB_PASSWORD"),
-		DB_SCHEMA:   os.Getenv("BLUEPRINT_DB_SCHEMA"),
-		DB_SSLMODE:  os.Getenv("BLUEPRINT_DB_SSLMODE"),
+		DB_HOST:     os.Getenv("DB_HOST"),
+		DB_PORT:     os.Getenv("DB_PORT"),
+		DB_DATABASE: os.Getenv("DB_DATABASE"),
+		DB_USERNAME: os.Getenv("DB_USERNAME"),
+		DB_PASSWORD: os.Getenv("DB_PASSWORD"),
+		DB_SCHEMA:   os.Getenv("DB_SCHEMA"),
+		DB_SSLMODE:  os.Getenv("DB_SSLMODE"),
 		validator:   validator,
 	}
 
