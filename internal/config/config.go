@@ -8,17 +8,16 @@ import (
 )
 
 type Config struct {
-	JWTSecret   string `validate:"required"`
-	PORT        string `validate:"required,numeric"`
-	DB_HOST     string `validate:"required"`
-	DB_PORT     string `validate:"required,numeric"`
-	DB_DATABASE string `validate:"required"`
-	DB_USERNAME string `validate:"required"`
-	DB_PASSWORD string `validate:"required"`
-	DB_SCHEMA   string `validate:"required"`
-	DB_SSLMODE  string `validate:"required"`
-
-	validator *validator.Validate
+	JWTSecret          string `validate:"required"`
+	PORT               string `validate:"required,numeric"`
+	DB_HOST            string `validate:"required"`
+	DB_PORT            string `validate:"required,numeric"`
+	DB_DATABASE        string `validate:"required"`
+	DB_USERNAME        string `validate:"required"`
+	DB_PASSWORD        string `validate:"required"`
+	DB_SCHEMA          string `validate:"required"`
+	DB_SSLMODE         string `validate:"required"`
+	OVERBOOKING_FACTOR string `validate:"required,numeric,min=1"`
 }
 
 var config *Config
@@ -41,10 +40,9 @@ func loadAndValidateConfig(validator *validator.Validate) *Config {
 		DB_PASSWORD: os.Getenv("DB_PASSWORD"),
 		DB_SCHEMA:   os.Getenv("DB_SCHEMA"),
 		DB_SSLMODE:  os.Getenv("DB_SSLMODE"),
-		validator:   validator,
 	}
 
-	if err := cfg.validator.Struct(cfg); err != nil {
+	if err := validator.Struct(cfg); err != nil {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
 

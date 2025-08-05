@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -64,6 +65,13 @@ type AuthUser struct {
 	DeletedAt    sql.NullTime `json:"deleted_at"`
 }
 
+type BookingGuest struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+}
+
 type BookingHotel struct {
 	ID        uuid.UUID    `json:"id"`
 	Name      string       `json:"name"`
@@ -71,6 +79,18 @@ type BookingHotel struct {
 	CreatedAt sql.NullTime `json:"created_at"`
 	UpdatedAt sql.NullTime `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
+}
+
+type BookingReservation struct {
+	ID         uuid.UUID `json:"id"`
+	HotelID    uuid.UUID `json:"hotel_id"`
+	RoomTypeID uuid.UUID `json:"room_type_id"`
+	StartDate  time.Time `json:"start_date"`
+	EndDate    time.Time `json:"end_date"`
+	Status     string    `json:"status"`
+	GuestID    uuid.UUID `json:"guest_id"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type BookingRoom struct {
@@ -93,4 +113,15 @@ type BookingRoomType struct {
 	Description sql.NullString `json:"description"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
+}
+
+type BookingRoomTypeInventory struct {
+	HotelID        uuid.UUID `json:"hotel_id"`
+	RoomTypeID     uuid.UUID `json:"room_type_id"`
+	Date           time.Time `json:"date"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	CreatedAt      time.Time `json:"created_at"`
+	Version        int64     `json:"version"`
+	TotalInventory int32     `json:"total_inventory"`
+	TotalReserved  int32     `json:"total_reserved"`
 }

@@ -14,10 +14,10 @@ var (
 
 type HotelService struct {
 	queries   *database.Queries
-	validator validator.Validate
+	validator *validator.Validate
 }
 
-func New(queries *database.Queries, validator validator.Validate) *HotelService {
+func New(queries *database.Queries, validator *validator.Validate) *HotelService {
 	return &HotelService{
 		queries:   queries,
 		validator: validator,

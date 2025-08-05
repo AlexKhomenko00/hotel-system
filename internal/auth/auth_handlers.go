@@ -1,4 +1,4 @@
-package server
+package auth
 
 import (
 	"context"
@@ -12,36 +12,20 @@ import (
 
 	"github.com/AlexKhomenko00/hotel-system/internal/database"
 	"github.com/AlexKhomenko00/hotel-system/internal/shared"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type userContextKey string
-
-var UsrCtxKey userContextKey = "user"
-
-type UserContext struct {
-	Id    string
-	Email string
+func (s *AuthService) RegisterHandlers(r *chi.Mux) {
+	r.Group(func(r chi.Router) {
+		r.Post("/register", s.registerHandler)
+		r.Post("/login", s.loginHandler)
+	})
 }
 
-type AuthBody struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=3,max=30"`
-}
-
-type UserResponse struct {
-	Id    string `json:"id"`
-	Email string `json:"email"`
-}
-
-type LoginResponse struct {
-	AccessToken string       `json:"access_token"`
-	User        UserResponse `json:"user"`
-}
-
-func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (s *AuthService) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var body AuthBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -97,7 +81,7 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) registerHandler(w http.ResponseWriter, r *http.Request) {
+func (s *AuthService) registerHandler(w http.ResponseWriter, r *http.Request) {
 	var body AuthBody
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -164,7 +148,7 @@ func (s *Server) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) jwtAuthMiddleware(next http.Handler) http.Handler {
+func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, claims, err := jwtauth.FromContext(r.Context())
 
@@ -198,10 +182,37 @@ func (s *Server) jwtAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		usrCtx := context.WithValue(r.Context(), UsrCtxKey, UserContext{
-			Id:    usr.ID.String(),
+			Id:    usr.ID,
 			Email: usr.Email,
 		})
 
 		next.ServeHTTP(w, r.WithContext(usrCtx))
+	})
+}
+
+func (s *AuthService) SetupJWTAuthMiddleware(r chi.Router) {
+	r.Use(s.jwt.Verifier())
+	r.Use(s.jwtAuthMiddleware)
+
+	r.Get("/verify", verifyTokenHandler)
+}
+
+func verifyTokenHandler(w http.ResponseWriter, r *http.Request) {
+	type TokenVerificationResponse struct {
+		Message string `json:"message"`
+	}
+	e := json.NewEncoder(w)
+	usr, ok := r.Context().Value(UsrCtxKey).(UserContext)
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		e.Encode(shared.ErrorRes{
+			Message: "Invalid token user claims",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	e.Encode(TokenVerificationResponse{
+		Message: fmt.Sprintf("Hi! %v", usr),
 	})
 }

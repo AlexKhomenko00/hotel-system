@@ -1,0 +1,115 @@
+package reservation
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/AlexKhomenko00/hotel-system/internal/database"
+	"github.com/AlexKhomenko00/hotel-system/internal/shared"
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
+)
+
+var (
+	ErrInventoryCapacityReached = errors.New("reached maximum inventory capacity for date")
+)
+
+type MakeReservationBody struct {
+	StartDate     shared.Date `json:"startDate" validate:"datetime=2006-01-02"`
+	EndDate       shared.Date `json:"endDate" validate:"datetime=2006-01-02"`
+	HotelID       uuid.UUID   `json:"hotelId" validate:"uuid4"`
+	RoomTypeID    uuid.UUID   `json:"roomTypeId" validate:"uuid4"`
+	ReservationId string      `json:"reservationId" validate:"uuid4"`
+}
+
+func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.UUID, body MakeReservationBody) error {
+	tx, err := s.db.GetDB().BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start make reservation transaction %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := s.queries.WithTx(tx)
+
+	inventory, err := qtx.GetHotelInventoryForRange(ctx, database.GetHotelInventoryForRangeParams{
+		RoomTypeID: body.RoomTypeID,
+		HotelID:    body.HotelID,
+		Date:       time.Time(body.StartDate),
+		Date_2:     time.Time(body.EndDate),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get hotel %q inventory: %w", body.HotelID, err)
+	}
+
+	overbookingFactor, err := strconv.Atoi(s.cfg.OVERBOOKING_FACTOR)
+
+	if err != nil {
+		return fmt.Errorf("invalid overbooking factor: %w", err)
+	}
+
+	for _, inventoryDate := range inventory {
+		if (inventoryDate.TotalReserved + 1) > (int32(overbookingFactor) * inventoryDate.TotalInventory) {
+			return fmt.Errorf("%s: %s", ErrInventoryCapacityReached, inventoryDate.Date)
+		}
+	}
+
+	reservationUUID, err := uuid.Parse(body.ReservationId)
+	if err != nil {
+		return fmt.Errorf("invalid reservation ID: %w", err)
+	}
+
+	_, err = qtx.InsertReservation(ctx, database.InsertReservationParams{
+		ID:         reservationUUID,
+		HotelID:    body.HotelID,
+		RoomTypeID: body.RoomTypeID,
+		StartDate:  time.Time(body.StartDate),
+		EndDate:    time.Time(body.EndDate),
+		Status:     string(ReservationStatusPending),
+		GuestID:    guestID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to insert reservation %w", err)
+	}
+
+	g := new(errgroup.Group)
+
+	for _, inventoryDate := range inventory {
+		g.Go(func() error {
+			rowsCount, err := qtx.UpdateRoomTypeInventoryForDate(ctx, database.UpdateRoomTypeInventoryForDateParams{
+				RoomTypeID:    inventoryDate.RoomTypeID,
+				TotalReserved: 1,
+				HotelID:       inventoryDate.HotelID,
+				Date:          inventoryDate.Date,
+				Version:       inventoryDate.Version,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			if rowsCount == 0 {
+				return fmt.Errorf("no rows updated for inventory date %q, for hotel: %q, for room type %q  -> optimistic lock mismatch?", inventoryDate.Date, inventoryDate.HotelID, inventoryDate.RoomTypeID)
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to update inventory: %w", err)
+	}
+
+	return tx.Commit()
+
+}
+
+func (s *ReservationService) generateReservationId() string {
+	/* This is oversimplification even though robust one.
+	Probably for real production system distributed unique id generator like twitter's snowflake may by used.**/
+	return uuid.NewString()
+}
