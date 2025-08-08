@@ -13,7 +13,7 @@ import (
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
-	id, email, password_hash, created_at, updated_at, deleted_at
+	id, email, password_hash, created_at, updated_at, deleted_at, guest_id
 FROM
 	auth.users
 WHERE
@@ -30,13 +30,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AuthUser, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GuestID,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
 SELECT
-	id, email, password_hash, created_at, updated_at, deleted_at
+	id, email, password_hash, created_at, updated_at, deleted_at, guest_id
 FROM
 	auth.users
 WHERE
@@ -55,6 +56,7 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (AuthUser, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GuestID,
 	)
 	return i, err
 }
@@ -65,7 +67,7 @@ INSERT INTO
 VALUES
 	($1, $2, $3)
 RETURNING
-	id, email, password_hash, created_at, updated_at, deleted_at
+	id, email, password_hash, created_at, updated_at, deleted_at, guest_id
 `
 
 type InsertUserParams struct {
@@ -84,6 +86,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (AuthUse
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GuestID,
 	)
 	return i, err
 }
