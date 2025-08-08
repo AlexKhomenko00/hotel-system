@@ -19,3 +19,26 @@ WHERE
 	AND hotel_id = $3
 	AND date = $4
 	AND version = $5;
+
+-- name: BatchUpdateRoomTypeInventory :execrows
+INSERT INTO
+	booking.room_type_inventory (
+		hotel_id,
+		room_type_id,
+		date,
+		total_inventory,
+		total_reserved,
+		updated_at,
+		created_at
+	)
+SELECT
+	@hotel_id,
+	@room_type_id,
+	unnest(@dates),
+	@total_inventory,
+	0,
+	CURRENT_TIMESTAMP,
+	CURRENT_TIMESTAMP
+	--  simplification of a business rule to not handle constantly changing overcapacity issue-> e.g. some rolling update in the future is possible
+	ON CONFLICT (hotel_id, room_type_id, date)
+DO NOTHING;

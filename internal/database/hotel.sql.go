@@ -18,7 +18,7 @@ INSERT INTO
 VALUES
 	($1, $2, $3)
 RETURNING
-	id, name, location, created_at, updated_at, deleted_at
+	id, name, location, created_at, updated_at, deleted_at, is_active
 `
 
 type CreateHotelParams struct {
@@ -37,6 +37,7 @@ func (q *Queries) CreateHotel(ctx context.Context, arg CreateHotelParams) (Booki
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsActive,
 	)
 	return i, err
 }
@@ -137,9 +138,49 @@ func (q *Queries) FindRoomTypesByHotelIdAndName(ctx context.Context, arg FindRoo
 	return i, err
 }
 
+const getActiveHotels = `-- name: GetActiveHotels :many
+SELECT
+	id, name, location, created_at, updated_at, deleted_at, is_active
+FROM
+	booking.hotels
+WHERE
+	is_active
+`
+
+func (q *Queries) GetActiveHotels(ctx context.Context) ([]BookingHotel, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveHotels)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BookingHotel
+	for rows.Next() {
+		var i BookingHotel
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Location,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getHotelById = `-- name: GetHotelById :one
 SELECT
-	id, name, location, created_at, updated_at, deleted_at
+	id, name, location, created_at, updated_at, deleted_at, is_active
 FROM
 	booking.hotels
 WHERE
@@ -156,13 +197,14 @@ func (q *Queries) GetHotelById(ctx context.Context, id uuid.UUID) (BookingHotel,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsActive,
 	)
 	return i, err
 }
 
 const getHotelByName = `-- name: GetHotelByName :one
 SELECT
-	id, name, location, created_at, updated_at, deleted_at
+	id, name, location, created_at, updated_at, deleted_at, is_active
 FROM
 	booking.hotels
 WHERE
@@ -179,8 +221,41 @@ func (q *Queries) GetHotelByName(ctx context.Context, name string) (BookingHotel
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsActive,
 	)
 	return i, err
+}
+
+const getHotelUniqueRoomTypes = `-- name: GetHotelUniqueRoomTypes :many
+SELECT DISTINCT
+	id
+FROM
+	booking.room_types
+WHERE
+	hotel_id = $1
+`
+
+func (q *Queries) GetHotelUniqueRoomTypes(ctx context.Context, hotelID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getHotelUniqueRoomTypes, hotelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getRoomTypeByIdAndHotelId = `-- name: GetRoomTypeByIdAndHotelId :one
@@ -221,7 +296,7 @@ SET
 WHERE
 	id = $1
 RETURNING
-	id, name, location, created_at, updated_at, deleted_at
+	id, name, location, created_at, updated_at, deleted_at, is_active
 `
 
 type UpdateHotelParams struct {
@@ -240,6 +315,7 @@ func (q *Queries) UpdateHotel(ctx context.Context, arg UpdateHotelParams) (Booki
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsActive,
 	)
 	return i, err
 }

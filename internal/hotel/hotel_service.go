@@ -20,6 +20,10 @@ type UpdateHotelBody struct {
 	Location string `json:"location" validate:"required,min=1,max=255"`
 }
 
+func (s *HotelService) GetActiveHotels(ctx context.Context) ([]database.BookingHotel, error) {
+	return s.queries.GetActiveHotels(ctx)
+}
+
 func (s *HotelService) createHotel(ctx context.Context, body CreateHotelBody) (database.BookingHotel, error) {
 
 	_, err := s.queries.GetHotelByName(ctx,

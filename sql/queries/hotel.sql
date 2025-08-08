@@ -85,3 +85,19 @@ SET
 WHERE
 	id = $1
 	AND hotel_id = $2;
+
+-- name: GetActiveHotels :many
+SELECT
+	*
+FROM
+	booking.hotels
+WHERE
+	is_active;
+
+-- name: GetHotelUniqueRoomTypes :many
+SELECT DISTINCT
+	id
+FROM
+	booking.room_types
+WHERE
+	hotel_id = $1;

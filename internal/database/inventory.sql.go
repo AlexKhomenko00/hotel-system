@@ -12,6 +12,50 @@ import (
 	"github.com/google/uuid"
 )
 
+const batchUpdateRoomTypeInventory = `-- name: BatchUpdateRoomTypeInventory :execrows
+INSERT INTO
+	booking.room_type_inventory (
+		hotel_id,
+		room_type_id,
+		date,
+		total_inventory,
+		total_reserved,
+		updated_at,
+		created_at
+	)
+SELECT
+	$1,
+	$2,
+	unnest($3),
+	$4,
+	0,
+	CURRENT_TIMESTAMP,
+	CURRENT_TIMESTAMP
+	--  simplification of a business rule to not handle constantly changing overcapacity issue-> e.g. some rolling update in the future is possible
+	ON CONFLICT (hotel_id, room_type_id, date)
+DO NOTHING
+`
+
+type BatchUpdateRoomTypeInventoryParams struct {
+	HotelID        uuid.UUID   `json:"hotel_id"`
+	RoomTypeID     uuid.UUID   `json:"room_type_id"`
+	Dates          interface{} `json:"dates"`
+	TotalInventory int32       `json:"total_inventory"`
+}
+
+func (q *Queries) BatchUpdateRoomTypeInventory(ctx context.Context, arg BatchUpdateRoomTypeInventoryParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, batchUpdateRoomTypeInventory,
+		arg.HotelID,
+		arg.RoomTypeID,
+		arg.Dates,
+		arg.TotalInventory,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getHotelInventoryForRange = `-- name: GetHotelInventoryForRange :many
 SELECT
 	hotel_id, room_type_id, date, updated_at, created_at, version, total_inventory, total_reserved
