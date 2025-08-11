@@ -109,7 +109,35 @@ func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.U
 }
 
 func (s *ReservationService) generateReservationId() string {
-	/* This is oversimplification even though robust one.
-	Probably for real production system distributed unique id generator like twitter's snowflake may by used.**/
+	/*
+		This is oversimplification even though okay-ish one.
+		Probably for real production system distributed unique id generator like twitter's snowflake may by used.
+	**/
 	return uuid.NewString()
+}
+
+type GetAvailabilityQuery struct {
+	HotelID  uuid.UUID
+	CheckIn  time.Time
+	CheckOut time.Time
+}
+
+func (s *ReservationService) getRoomAvailability(ctx context.Context, payload GetAvailabilityQuery) ([]database.GetRoomAvailabilityByDatesRow, error) {
+	overbookingFactor, err := strconv.Atoi(s.cfg.OVERBOOKING_FACTOR)
+	if err != nil {
+		return nil, fmt.Errorf("invalid overbooking factor: %w", err)
+	}
+
+	availability, err := s.queries.GetRoomAvailabilityByDates(ctx, database.GetRoomAvailabilityByDatesParams{
+		HotelID:     payload.HotelID,
+		CheckIn:     payload.CheckIn,
+		CheckOut:    payload.CheckOut,
+		Overbooking: int32(overbookingFactor),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get room availability for hotel %q: %w", payload.HotelID, err)
+	}
+
+	return availability, nil
 }

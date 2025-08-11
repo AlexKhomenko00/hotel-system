@@ -42,3 +42,17 @@ SELECT
 	--  simplification of a business rule to not handle constantly changing overcapacity issue-> e.g. some rolling update in the future is possible
 	ON CONFLICT (hotel_id, room_type_id, date)
 DO NOTHING;
+
+-- name: GetRoomAvailabilityByDates :many
+SELECT 
+	rti.room_type_id,
+	rt.name as room_type_name,
+	rt.description,
+	rti.date,
+	(rti.total_inventory - rti.total_reserved) as available_capacity
+FROM booking.room_type_inventory rti
+INNER JOIN booking.room_types rt ON rti.room_type_id = rt.id
+WHERE rti.hotel_id = @hotel_id
+	AND rti.date BETWEEN @check_in AND @check_out
+	AND rti.total_reserved < ((@overbooking)::int * rti.total_inventory)
+ORDER BY rt.name, rti.date;

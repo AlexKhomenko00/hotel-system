@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,6 +98,70 @@ func (q *Queries) GetHotelInventoryForRange(ctx context.Context, arg GetHotelInv
 			&i.Version,
 			&i.TotalInventory,
 			&i.TotalReserved,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRoomAvailabilityByDates = `-- name: GetRoomAvailabilityByDates :many
+SELECT 
+	rti.room_type_id,
+	rt.name as room_type_name,
+	rt.description,
+	rti.date,
+	(rti.total_inventory - rti.total_reserved) as available_capacity
+FROM booking.room_type_inventory rti
+INNER JOIN booking.room_types rt ON rti.room_type_id = rt.id
+WHERE rti.hotel_id = $1
+	AND rti.date BETWEEN $2 AND $3
+	AND rti.total_reserved < (($4)::int * rti.total_inventory)
+ORDER BY rt.name, rti.date
+`
+
+type GetRoomAvailabilityByDatesParams struct {
+	HotelID     uuid.UUID `json:"hotel_id"`
+	CheckIn     time.Time `json:"check_in"`
+	CheckOut    time.Time `json:"check_out"`
+	Overbooking int32     `json:"overbooking"`
+}
+
+type GetRoomAvailabilityByDatesRow struct {
+	RoomTypeID        uuid.UUID      `json:"room_type_id"`
+	RoomTypeName      string         `json:"room_type_name"`
+	Description       sql.NullString `json:"description"`
+	Date              time.Time      `json:"date"`
+	AvailableCapacity int32          `json:"available_capacity"`
+}
+
+func (q *Queries) GetRoomAvailabilityByDates(ctx context.Context, arg GetRoomAvailabilityByDatesParams) ([]GetRoomAvailabilityByDatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRoomAvailabilityByDates,
+		arg.HotelID,
+		arg.CheckIn,
+		arg.CheckOut,
+		arg.Overbooking,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRoomAvailabilityByDatesRow
+	for rows.Next() {
+		var i GetRoomAvailabilityByDatesRow
+		if err := rows.Scan(
+			&i.RoomTypeID,
+			&i.RoomTypeName,
+			&i.Description,
+			&i.Date,
+			&i.AvailableCapacity,
 		); err != nil {
 			return nil, err
 		}

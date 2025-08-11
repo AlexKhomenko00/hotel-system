@@ -9,7 +9,7 @@ type Date time.Time
 
 func (d *Date) UnmarshalJSON(data []byte) error {
 	str := strings.Trim(string(data), `"`)
-	t, err := time.Parse("2006-01-02", str)
+	t, err := time.Parse(time.DateOnly, str)
 	if err != nil {
 		return err
 	}
