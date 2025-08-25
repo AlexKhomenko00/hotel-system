@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hotel-system-migrate
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: hotel-system-migration:latest
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: psql-credentials
+              key: database-url
+        command: ["goose", "postgres", "$(DATABASE_URL)", "up"]
+      restartPolicy: Never

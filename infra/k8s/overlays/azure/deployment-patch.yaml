@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hotel-system
+spec:
+  template:
+    spec:
+      serviceAccountName: workload-identity-sa
+      containers:
+      - name: hotel-system
+        image: PLACEHOLDER_ACR_LOGIN_SERVER/hotel-migration:latest
+        imagePullPolicy: Always
+        env:
+          - name: OVERBOOKING_FACTOR
+            valueFrom:
+              configMapKeyRef:
+                key: overbooking-factor
+                name: hotel-system-config
+          - name: APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                key: app-env
+                name: hotel-system-config
+          - name: PORT
+            valueFrom:
+              configMapKeyRef:
+                key: port
+                name: hotel-system-config
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: db-host
+                name: hotel-system-config
+          - name: DB_SCHEMA
+            valueFrom:
+              configMapKeyRef:
+                key: db-schema
+                name: hotel-system-config
+          - name: DB_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                key: db-database
+                name: hotel-system-config
+          - name: DB_SSLMODE
+            valueFrom:
+              configMapKeyRef:
+                key: db-sslmode
+                name: hotel-system-config
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                key: db-port
+                name: hotel-system-config
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: jwt-secret
+                name: psql-credentials
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: username
+                name: psql-credentials
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: psql-credentials
+        volumeMounts:
+        - name: secrets-store
+          mountPath: /mnt/secrets-store
+          readOnly: true
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: psql-secrets

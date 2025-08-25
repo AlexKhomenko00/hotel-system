@@ -1,0 +1,13 @@
+  FROM alpine:3.22.1
+
+  RUN apk update && \
+      apk upgrade && \
+      apk add --no-cache bash ca-certificates curl && \
+      rm -rf /var/cache/apk/*
+
+  RUN curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | sh
+
+  WORKDIR /migrations
+  COPY ./sql/schema/ /migrations/
+
+  CMD ["goose", "up"]

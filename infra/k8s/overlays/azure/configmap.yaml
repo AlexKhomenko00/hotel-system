@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hotel-system-config
+data:
+  app-env: "production"
+  db-schema: "public"
+  db-host: "PLACEHOLDER_DB_HOST"
+  db-port: "PLACEHOLDER_DB_PORT"
+  db-database: "PLACEHOLDER_DB_DATABASE"
+  db-sslmode: "require"

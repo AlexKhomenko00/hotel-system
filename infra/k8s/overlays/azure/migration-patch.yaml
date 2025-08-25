@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hotel-system-migrate
+spec:
+  template:
+    spec:
+      serviceAccountName: workload-identity-sa
+      containers:
+      - name: migration
+        image: PLACEHOLDER_ACR_LOGIN_SERVER/hotel-migration:latest
+        imagePullPolicy: Always

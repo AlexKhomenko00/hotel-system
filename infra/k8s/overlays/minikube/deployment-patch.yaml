@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  hotel-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: hotel-system
+        image: hotel-system:minikube
+        imagePullPolicy: Never
+        env:
+          - name: OVERBOOKING_FACTOR
+            valueFrom:
+              configMapKeyRef:
+                key: overbooking-factor
+                name: hotel-system-config
+          - name: APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                key: app-env
+                name: hotel-system-config
+          - name: PORT
+            valueFrom:
+              configMapKeyRef:
+                key: port
+                name: hotel-system-config
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                key: db-host
+                name: hotel-system-config
+          - name: DB_SCHEMA
+            valueFrom:
+              configMapKeyRef:
+                key: db-schema
+                name: hotel-system-config
+          - name: DB_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                key: db-database
+                name: hotel-system-config
+          - name: DB_SSLMODE
+            valueFrom:
+              configMapKeyRef:
+                key: db-sslmode
+                name: hotel-system-config
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                key: db-port
+                name: hotel-system-config
+          - name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: jwt-secret
+                name: psql-credentials
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: db-username
+                name: psql-credentials
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: db-password
+                name: psql-credentials

@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 -- Breaking change normally not allowed on production :)
 ALTER TABLE auth.users
-ADD COLUMN guest_id UUID NOT NULL REFERENCES guests (id) UNIQUE;
+ADD COLUMN guest_id UUID NOT NULL REFERENCES booking.guests (id) UNIQUE;
 
 -- +goose StatementEnd
 -- +goose Down

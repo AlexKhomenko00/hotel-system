@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hotel-system-config
+data:
+  app-env: "development"
+  db-schema: "public"
+  db-host: "host.docker.internal"
+  db-port: "5483"
+  db-database: "booking"
+  db-sslmode: "disable"
