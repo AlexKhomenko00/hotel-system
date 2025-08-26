@@ -78,4 +78,35 @@ migrate-create:
 	@echo "Creating new migration..."
 	@cd sql/schema && goose create "$(name)" sql
 
-.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status
+# SQLC code generation
+generate:
+	@echo "Generating code from SQL..."
+	@sqlc generate
+
+# Terraform operations
+tf-init:
+	@echo "Initializing Terraform..."
+	@cd infra/terraform && terraform init
+
+tf-plan:
+	@echo "Planning Terraform changes..."
+	@cd infra/terraform && terraform plan
+
+tf-apply:
+	@echo "Applying Terraform changes..."
+	@cd infra/terraform && terraform apply
+
+tf-destroy:
+	@echo "Destroying Terraform resources..."
+	@cd infra/terraform && terraform destroy
+
+tf-output:
+	@echo "Showing Terraform outputs..."
+	@cd infra/terraform && terraform output
+
+# Azure deployment
+deploy-azure:
+	@echo "Deploying to Azure Kubernetes..."
+	@./infra/deploy-azure.sh
+
+.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-status generate tf-init tf-plan tf-apply tf-destroy tf-output deploy-azure

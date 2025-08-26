@@ -10,8 +10,8 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       PORT: ${PORT}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: psql_hotel_system
+      DB_HOST: psql_hotel_system
+      DB_PORT: 5432
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
