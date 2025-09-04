@@ -3,3 +3,4 @@ resources:
 - migration.yaml
 - configmap.yaml
 - rbac.yaml
+- inventory-cron.yaml
