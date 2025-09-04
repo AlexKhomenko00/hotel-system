@@ -2,6 +2,7 @@ package reservation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -42,10 +43,22 @@ func (s *ReservationService) MakeReservationHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	err := s.makeReservation(r.Context(), usr.Id, body)
+	err := s.makeReservation(r.Context(), usr.GuestId, body)
 	if err != nil {
-		if err.Error() == ErrInventoryCapacityReached.Error() {
+		if errors.Is(err, ErrInventoryCapacityReached) {
 			shared.WriteError(w, http.StatusConflict, "No availability for selected dates")
+			return
+		}
+		if errors.Is(err, ErrInvalidReservationID) {
+			shared.WriteError(w, http.StatusBadRequest, "Invalid reservation ID")
+			return
+		}
+		if errors.Is(err, ErrOptimisticLockMismatch) {
+			shared.WriteError(w, http.StatusConflict, "Reservation conflict - please try again")
+			return
+		}
+		if errors.Is(err, ErrDuplicateReservation) {
+			shared.WriteError(w, http.StatusConflict, "Reservation ID already exists")
 			return
 		}
 

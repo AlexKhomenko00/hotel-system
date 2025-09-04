@@ -13,8 +13,7 @@ CREATE TABLE
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (hotel_id) REFERENCES booking.hotels (id) ON DELETE CASCADE,
 		FOREIGN KEY (room_type_id) REFERENCES booking.room_types (id) ON DELETE CASCADE,
-		FOREIGN KEY (guest_id) REFERENCES booking.guests (id) ON DELETE CASCADE,
-		UNIQUE (hotel_id, room_type_id, start_date, end_date)
+		FOREIGN KEY (guest_id) REFERENCES booking.guests (id) ON DELETE CASCADE
 	);
 
 CREATE TABLE

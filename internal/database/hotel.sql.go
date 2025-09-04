@@ -42,6 +42,53 @@ func (q *Queries) CreateHotel(ctx context.Context, arg CreateHotelParams) (Booki
 	return i, err
 }
 
+const createRoom = `-- name: CreateRoom :one
+INSERT INTO
+	booking.rooms (id, hotel_id, room_type_id, name, description, number, floor, created_at, updated_at, status)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8)
+RETURNING
+	id, hotel_id, room_type_id, status, name, description, number, floor, created_at, updated_at
+`
+
+type CreateRoomParams struct {
+	ID          uuid.UUID         `json:"id"`
+	HotelID     uuid.UUID         `json:"hotel_id"`
+	RoomTypeID  uuid.UUID         `json:"room_type_id"`
+	Name        string            `json:"name"`
+	Description sql.NullString    `json:"description"`
+	Number      int32             `json:"number"`
+	Floor       int32             `json:"floor"`
+	Status      BookingRoomStatus `json:"status"`
+}
+
+func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (BookingRoom, error) {
+	row := q.db.QueryRowContext(ctx, createRoom,
+		arg.ID,
+		arg.HotelID,
+		arg.RoomTypeID,
+		arg.Name,
+		arg.Description,
+		arg.Number,
+		arg.Floor,
+		arg.Status,
+	)
+	var i BookingRoom
+	err := row.Scan(
+		&i.ID,
+		&i.HotelID,
+		&i.RoomTypeID,
+		&i.Status,
+		&i.Name,
+		&i.Description,
+		&i.Number,
+		&i.Floor,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createRoomType = `-- name: CreateRoomType :one
 INSERT INTO
 	booking.room_types (id, hotel_id, name, description)

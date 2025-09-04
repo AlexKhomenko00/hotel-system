@@ -61,10 +61,7 @@ func (s *AuthService) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, tokenString, err := s.jwt.Encode(map[string]interface{}{
-		"userId": usr.ID,
-		"email":  usr.Email,
-	})
+	_, tokenString, err := s.jwt.EncodeUserClaims(usr)
 	if err != nil {
 		slog.Error("Failed to generate JWT token", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -153,16 +150,25 @@ func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 		token, claims, err := jwtauth.FromContext(r.Context())
 
 		if err != nil {
+			slog.Error(err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
 		if token == nil {
+
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		usrID, ok := claims["userId"].(string)
+		if !ok {
+
+			http.Error(w, "invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		_, ok = claims["email"].(string)
 		if !ok {
 			http.Error(w, "invalid token claims", http.StatusUnauthorized)
 			return
@@ -182,8 +188,9 @@ func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		usrCtx := context.WithValue(r.Context(), UsrCtxKey, UserContext{
-			Id:    usr.ID,
-			Email: usr.Email,
+			Id:      usr.ID,
+			Email:   usr.Email,
+			GuestId: usr.GuestID,
 		})
 
 		next.ServeHTTP(w, r.WithContext(usrCtx))
@@ -191,6 +198,7 @@ func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 }
 
 func (s *AuthService) SetupJWTAuthMiddleware(r chi.Router) {
+	slog.Info("Setting up JWT middleware", "jwt_secret", s.cfg.JWTSecret)
 	r.Use(s.jwt.Verifier())
 	r.Use(s.jwtAuthMiddleware)
 

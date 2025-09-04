@@ -34,7 +34,7 @@ func main() {
 
 	/* More complex partition based job processing should be applied.
 	Probably hotels may be partitioned by country or timezones so CRON schedule should account for it.
-	For presentation purpose that we don't have thousands of hotels and they all in the same time zone so we can safely CRON once per day.
+	For presentation purpose assume that we don't have thousands of hotels and they all in the same time zone so we can safely CRON once per day.
 	**/
 	hotels, err := hotelSvc.GetActiveHotels(ctx)
 	if err != nil {
@@ -145,19 +145,4 @@ func getHotelInventoryFromTo(ctx context.Context, queries *database.Queries, hot
 	}
 
 	return capacity, nil
-}
-
-func maxTime(date_1, date_2 time.Time) time.Time {
-	if date_1.After(date_2) {
-		return date_1
-	}
-	return date_2
-}
-
-func minTime(date_1, date_2 time.Time) time.Time {
-	if date_1.Before(date_2) {
-		return date_1
-	}
-
-	return date_2
 }

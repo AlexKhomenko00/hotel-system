@@ -34,7 +34,7 @@ INSERT INTO
 SELECT
 	@hotel_id,
 	@room_type_id,
-	unnest(@dates),
+	unnest(@dates::timestamp[]),
 	@total_inventory,
 	0,
 	CURRENT_TIMESTAMP,
@@ -54,5 +54,5 @@ FROM booking.room_type_inventory rti
 INNER JOIN booking.room_types rt ON rti.room_type_id = rt.id
 WHERE rti.hotel_id = @hotel_id
 	AND rti.date BETWEEN @check_in AND @check_out
-	AND rti.total_reserved < ((@overbooking)::int * rti.total_inventory)
+	AND rti.total_reserved < ((@overbooking)::float * rti.total_inventory)
 ORDER BY rt.name, rti.date;

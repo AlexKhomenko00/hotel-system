@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const batchUpdateRoomTypeInventory = `-- name: BatchUpdateRoomTypeInventory :execrows
@@ -27,7 +28,7 @@ INSERT INTO
 SELECT
 	$1,
 	$2,
-	unnest($3),
+	unnest($3::timestamp[]),
 	$4,
 	0,
 	CURRENT_TIMESTAMP,
@@ -40,7 +41,7 @@ DO NOTHING
 type BatchUpdateRoomTypeInventoryParams struct {
 	HotelID        uuid.UUID   `json:"hotel_id"`
 	RoomTypeID     uuid.UUID   `json:"room_type_id"`
-	Dates          interface{} `json:"dates"`
+	Dates          []time.Time `json:"dates"`
 	TotalInventory int32       `json:"total_inventory"`
 }
 
@@ -48,7 +49,7 @@ func (q *Queries) BatchUpdateRoomTypeInventory(ctx context.Context, arg BatchUpd
 	result, err := q.db.ExecContext(ctx, batchUpdateRoomTypeInventory,
 		arg.HotelID,
 		arg.RoomTypeID,
-		arg.Dates,
+		pq.Array(arg.Dates),
 		arg.TotalInventory,
 	)
 	if err != nil {
@@ -123,7 +124,7 @@ FROM booking.room_type_inventory rti
 INNER JOIN booking.room_types rt ON rti.room_type_id = rt.id
 WHERE rti.hotel_id = $1
 	AND rti.date BETWEEN $2 AND $3
-	AND rti.total_reserved < (($4)::int * rti.total_inventory)
+	AND rti.total_reserved < (($4)::float * rti.total_inventory)
 ORDER BY rt.name, rti.date
 `
 
@@ -131,7 +132,7 @@ type GetRoomAvailabilityByDatesParams struct {
 	HotelID     uuid.UUID `json:"hotel_id"`
 	CheckIn     time.Time `json:"check_in"`
 	CheckOut    time.Time `json:"check_out"`
-	Overbooking int32     `json:"overbooking"`
+	Overbooking float64   `json:"overbooking"`
 }
 
 type GetRoomAvailabilityByDatesRow struct {

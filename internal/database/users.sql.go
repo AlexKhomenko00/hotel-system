@@ -63,9 +63,9 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (AuthUser, erro
 
 const insertUser = `-- name: InsertUser :one
 INSERT INTO
-	auth.users (id, email, password_hash)
+	auth.users (id, email, password_hash, guest_id)
 VALUES
-	($1, $2, $3)
+	($1, $2, $3, $4)
 RETURNING
 	id, email, password_hash, created_at, updated_at, deleted_at, guest_id
 `
@@ -74,10 +74,16 @@ type InsertUserParams struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"password_hash"`
+	GuestID      uuid.UUID `json:"guest_id"`
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (AuthUser, error) {
-	row := q.db.QueryRowContext(ctx, insertUser, arg.ID, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRowContext(ctx, insertUser,
+		arg.ID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.GuestID,
+	)
 	var i AuthUser
 	err := row.Scan(
 		&i.ID,

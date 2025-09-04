@@ -2,7 +2,6 @@ package reservation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,10 +10,6 @@ import (
 	"github.com/AlexKhomenko00/hotel-system/internal/shared"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
-)
-
-var (
-	ErrInventoryCapacityReached = errors.New("reached maximum inventory capacity for date")
 )
 
 type MakeReservationBody struct {
@@ -45,21 +40,27 @@ func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.U
 		return fmt.Errorf("failed to get hotel %q inventory: %w", body.HotelID, err)
 	}
 
-	overbookingFactor, err := strconv.Atoi(s.cfg.OVERBOOKING_FACTOR)
+	expectedDays := int(time.Time(body.EndDate).Sub(time.Time(body.StartDate)).Hours()/24) + 1
+	if len(inventory) != expectedDays {
+		return ErrInventoryNotFound
+	}
+
+	overbookingFactor, err := strconv.ParseFloat(s.cfg.OVERBOOKING_FACTOR, 64)
 
 	if err != nil {
-		return fmt.Errorf("invalid overbooking factor: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidOverbookingFactor, err)
 	}
 
 	for _, inventoryDate := range inventory {
-		if (inventoryDate.TotalReserved + 1) > (int32(overbookingFactor) * inventoryDate.TotalInventory) {
-			return fmt.Errorf("%s: %s", ErrInventoryCapacityReached, inventoryDate.Date)
+		maxCapacity := int32(float64(inventoryDate.TotalInventory) * overbookingFactor)
+		if (inventoryDate.TotalReserved + 1) > maxCapacity {
+			return fmt.Errorf("%w: %s", ErrInventoryCapacityReached, inventoryDate.Date)
 		}
 	}
 
 	reservationUUID, err := uuid.Parse(body.ReservationId)
 	if err != nil {
-		return fmt.Errorf("invalid reservation ID: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidReservationID, err)
 	}
 
 	_, err = qtx.InsertReservation(ctx, database.InsertReservationParams{
@@ -93,7 +94,7 @@ func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.U
 			}
 
 			if rowsCount == 0 {
-				return fmt.Errorf("no rows updated for inventory date %q, for hotel: %q, for room type %q  -> optimistic lock mismatch?", inventoryDate.Date, inventoryDate.HotelID, inventoryDate.RoomTypeID)
+				return fmt.Errorf("%w: date %q, hotel %q, room type %q", ErrOptimisticLockMismatch, inventoryDate.Date, inventoryDate.HotelID, inventoryDate.RoomTypeID)
 			}
 
 			return nil
@@ -123,16 +124,16 @@ type GetAvailabilityQuery struct {
 }
 
 func (s *ReservationService) getRoomAvailability(ctx context.Context, payload GetAvailabilityQuery) ([]database.GetRoomAvailabilityByDatesRow, error) {
-	overbookingFactor, err := strconv.Atoi(s.cfg.OVERBOOKING_FACTOR)
+	overbookingFactor, err := strconv.ParseFloat(s.cfg.OVERBOOKING_FACTOR, 64)
 	if err != nil {
-		return nil, fmt.Errorf("invalid overbooking factor: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidOverbookingFactor, err)
 	}
 
 	availability, err := s.queries.GetRoomAvailabilityByDates(ctx, database.GetRoomAvailabilityByDatesParams{
 		HotelID:     payload.HotelID,
 		CheckIn:     payload.CheckIn,
 		CheckOut:    payload.CheckOut,
-		Overbooking: int32(overbookingFactor),
+		Overbooking: float64(overbookingFactor),
 	})
 
 	if err != nil {

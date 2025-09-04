@@ -18,8 +18,8 @@ LIMIT
 
 -- name: InsertUser :one
 INSERT INTO
-	auth.users (id, email, password_hash)
+	auth.users (id, email, password_hash, guest_id)
 VALUES
-	($1, $2, $3)
+	($1, $2, $3, $4)
 RETURNING
 	*;

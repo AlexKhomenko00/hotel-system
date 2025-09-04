@@ -40,6 +40,14 @@ SET
 WHERE
 	id = $1;
 
+-- name: CreateRoom :one
+INSERT INTO
+	booking.rooms (id, hotel_id, room_type_id, name, description, number, floor, created_at, updated_at, status)
+VALUES
+	($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8)
+RETURNING
+	*;
+
 -- name: FindRoomTypesByHotelIdAndName :one
 SELECT
 	*
