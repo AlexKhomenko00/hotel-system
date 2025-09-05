@@ -36,5 +36,5 @@ func (j *jwtAuthenticator) EncodeUserClaims(usr database.AuthUser) (jwt.Token, s
 }
 
 func (j *jwtAuthenticator) Verifier() func(http.Handler) http.Handler {
-	return jwtauth.Verifier(j.auth)
+	return jwtauth.Verify(j.auth, jwtauth.TokenFromHeader)
 }

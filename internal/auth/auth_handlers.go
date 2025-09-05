@@ -13,7 +13,7 @@ import (
 	"github.com/AlexKhomenko00/hotel-system/internal/database"
 	"github.com/AlexKhomenko00/hotel-system/internal/shared"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/jwtauth"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,6 +22,11 @@ func (s *AuthService) RegisterHandlers(r *chi.Mux) {
 	r.Group(func(r chi.Router) {
 		r.Post("/register", s.registerHandler)
 		r.Post("/login", s.loginHandler)
+	})
+
+	r.Group(func(r chi.Router) {
+		s.SetupJWTAuthMiddleware(r)
+		r.Get("/me", s.getBaseInfoHandler)
 	})
 }
 
@@ -68,10 +73,9 @@ func (s *AuthService) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	resEncoder.Encode(LoginResponse{
-		AccessToken: tokenString,
-		User: UserResponse{
+	shared.WriteJSON(w, http.StatusOK, shared.Envelope{
+		"access_token": tokenString,
+		"user": UserResponse{
 			Id:    usr.ID.String(),
 			Email: usr.Email,
 		},
@@ -79,7 +83,7 @@ func (s *AuthService) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *AuthService) registerHandler(w http.ResponseWriter, r *http.Request) {
-	var body AuthBody
+	var body RegisterBody
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -123,10 +127,24 @@ func (s *AuthService) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	guest, err := s.queries.InsertGuest(r.Context(), database.InsertGuestParams{
+		ID:        uuid.New(),
+		FirstName: body.FirstName,
+		LastName:  body.LastName,
+		Email:     body.Email,
+	})
+
+	if err != nil {
+		slog.Error("Unable to insert guest into db", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	usr, err := s.queries.InsertUser(r.Context(), database.InsertUserParams{
 		ID:           uuid.New(),
 		Email:        body.Email,
 		PasswordHash: string(hashedPasswordBytes),
+		GuestID:      guest.ID,
 	})
 	if err != nil {
 		slog.Error("unable to insert user into db", "error", err)
@@ -134,15 +152,33 @@ func (s *AuthService) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(UserResponse{
-		Id:    usr.ID.String(),
-		Email: usr.Email,
+	err = shared.WriteJSON(w, http.StatusCreated, shared.Envelope{
+		"user_id": usr.ID,
 	})
 
 	if err != nil {
 		slog.Error("failed to send user register response", "error", err)
 	}
+}
+
+func (s *AuthService) getBaseInfoHandler(w http.ResponseWriter, r *http.Request) {
+	usr, ok := r.Context().Value(UsrCtxKey).(UserContext)
+	if !ok {
+		shared.WriteError(w, http.StatusUnauthorized, "Invalid user context")
+		return
+	}
+	dbUsr, err := s.queries.GetUserById(r.Context(), usr.Id)
+	if err != nil {
+		shared.WriteError(w, http.StatusBadRequest, "Invalid token")
+		return
+	}
+
+	shared.WriteJSON(w, http.StatusOK, shared.Envelope{
+		"user_id":  dbUsr.ID,
+		"email":    dbUsr.Email,
+		"guest_id": dbUsr.GuestID,
+	})
+
 }
 
 func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
@@ -156,19 +192,17 @@ func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		if token == nil {
-
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
-		usrID, ok := claims["userId"].(string)
+		usrID, ok := claims["UserId"].(string)
 		if !ok {
-
 			http.Error(w, "invalid token claims", http.StatusUnauthorized)
 			return
 		}
 
-		_, ok = claims["email"].(string)
+		_, ok = claims["Email"].(string)
 		if !ok {
 			http.Error(w, "invalid token claims", http.StatusUnauthorized)
 			return
@@ -198,7 +232,6 @@ func (s *AuthService) jwtAuthMiddleware(next http.Handler) http.Handler {
 }
 
 func (s *AuthService) SetupJWTAuthMiddleware(r chi.Router) {
-	slog.Info("Setting up JWT middleware", "jwt_secret", s.cfg.JWTSecret)
 	r.Use(s.jwt.Verifier())
 	r.Use(s.jwtAuthMiddleware)
 

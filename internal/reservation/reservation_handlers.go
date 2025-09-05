@@ -28,7 +28,7 @@ func (s *ReservationService) GenerateReservationIdHandler(w http.ResponseWriter,
 func (s *ReservationService) MakeReservationHandler(w http.ResponseWriter, r *http.Request) {
 	usr, ok := r.Context().Value(auth.UsrCtxKey).(auth.UserContext)
 	if !ok {
-		shared.WriteError(w, http.StatusUnauthorized, "Guest ID not found in context")
+		shared.WriteError(w, http.StatusUnauthorized, "Missing credentials context")
 		return
 	}
 
