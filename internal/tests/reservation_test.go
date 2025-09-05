@@ -11,7 +11,6 @@ import (
 
 	"github.com/AlexKhomenko00/hotel-system/internal/database"
 	"github.com/AlexKhomenko00/hotel-system/internal/reservation"
-	"github.com/AlexKhomenko00/hotel-system/internal/shared"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,13 +24,6 @@ const (
 	TestInventoryPartial    = 5
 )
 
-type MakeReservationBody struct {
-	StartDate     shared.Date `json:"startDate"`
-	EndDate       shared.Date `json:"endDate"`
-	HotelID       uuid.UUID   `json:"hotelId"`
-	RoomTypeID    uuid.UUID   `json:"roomTypeId"`
-	ReservationId string      `json:"reservationId"`
-}
 
 type GenerateIdResponse struct {
 	ReservationId string `json:"reservation_id"`
@@ -87,17 +79,17 @@ func TestReservationOptimisticLocking(t *testing.T) {
 		reservationId1 := uuid.New().String()
 		reservationId2 := uuid.New().String()
 
-		reservation1 := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation1 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: reservationId1,
 		}
 
-		reservation2 := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation2 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: reservationId2,
@@ -184,17 +176,17 @@ func TestReservationOptimisticLocking(t *testing.T) {
 		require.NoError(t, err)
 		duplicateID := idResp.ReservationId
 
-		reservation1 := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation1 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: duplicateID,
 		}
 
-		reservation2 := MakeReservationBody{
-			StartDate:     shared.Date(startDate.AddDate(0, 0, 5)),
-			EndDate:       shared.Date(endDate.AddDate(0, 0, 5)),
+		reservation2 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: duplicateID,
@@ -237,9 +229,9 @@ func TestReservationOptimisticLocking(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		reservation1 := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation1 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: uuid.New().String(),
@@ -250,9 +242,9 @@ func TestReservationOptimisticLocking(t *testing.T) {
 		defer resp1.Body.Close()
 		assert.Equal(t, http.StatusCreated, resp1.StatusCode)
 
-		reservation2 := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation2 := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: uuid.New().String(),
@@ -298,9 +290,9 @@ func TestReservationBusinessLogic(t *testing.T) {
 		`, TestInventorySingle, hotel.ID, roomType.ID, startDate, endDate)
 		require.NoError(t, err)
 
-		reservation := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: uuid.New().String(),
@@ -350,9 +342,9 @@ func TestReservationBusinessLogic(t *testing.T) {
 		err = json.NewDecoder(idResp.Body).Decode(&idRespData)
 		require.NoError(t, err)
 
-		reservation := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: idRespData.ReservationId,
@@ -372,9 +364,9 @@ func TestReservationBusinessLogic(t *testing.T) {
 
 		futureDate := time.Now().AddDate(0, 0, 1).Truncate(24 * time.Hour)
 
-		reservation := MakeReservationBody{
-			StartDate:     shared.Date(futureDate),
-			EndDate:       shared.Date(futureDate.AddDate(0, 0, 1)),
+		reservation := reservation.MakeReservationBody{
+			StartDate:     futureDate,
+			EndDate:       futureDate.AddDate(0, 0, 1),
 			HotelID:       uuid.New(), // Non-existent hotel
 			RoomTypeID:    uuid.New(), // Non-existent room type
 			ReservationId: uuid.New().String(),
@@ -410,9 +402,9 @@ func TestReservationBusinessLogic(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		reservation := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: "invalid-uuid",
@@ -456,9 +448,9 @@ func TestReservationBusinessLogic(t *testing.T) {
 		err = json.NewDecoder(idResp.Body).Decode(&idRespData)
 		require.NoError(t, err)
 
-		reservation := MakeReservationBody{
-			StartDate:     shared.Date(startDate),
-			EndDate:       shared.Date(endDate),
+		reservation := reservation.MakeReservationBody{
+			StartDate:     startDate,
+			EndDate:       endDate,
 			HotelID:       hotel.ID,
 			RoomTypeID:    roomType.ID,
 			ReservationId: idRespData.ReservationId,

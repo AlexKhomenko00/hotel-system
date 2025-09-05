@@ -16,3 +16,8 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	*d = Date(t)
 	return nil
 }
+
+func (d Date) MarshalJSON() ([]byte, error) {
+	t := time.Time(d)
+	return []byte(`"` + t.Format(time.DateOnly) + `"`), nil
+}

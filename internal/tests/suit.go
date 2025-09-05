@@ -391,8 +391,8 @@ func (ts *TestSuite) CreateFullTestData() (*TestData, error) {
 		return nil, fmt.Errorf("failed to create test guest: %w", err)
 	}
 
-	checkIn := time.Now().AddDate(0, 0, 1)  // Tomorrow
-	checkOut := time.Now().AddDate(0, 0, 2) // Day after tomorrow
+	checkIn := time.Now().AddDate(0, 0, 1)
+	checkOut := time.Now().AddDate(0, 0, 2)
 
 	reservation, err := ts.CreateTestReservation(guest.ID, roomType.ID, hotel.ID, checkIn, checkOut)
 	if err != nil {
@@ -460,7 +460,6 @@ func (ts *TestSuite) MakeAuthenticatedRequest(method, url string, body any, user
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	fmt.Printf("fucking JWT %s \n", jwt)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
 
 	w := httptest.NewRecorder()

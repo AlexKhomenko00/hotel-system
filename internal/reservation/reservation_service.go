@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AlexKhomenko00/hotel-system/internal/database"
-	"github.com/AlexKhomenko00/hotel-system/internal/shared"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 )
 
 type MakeReservationBody struct {
-	StartDate     shared.Date `json:"startDate" validate:"datetime=2006-01-02"`
-	EndDate       shared.Date `json:"endDate" validate:"datetime=2006-01-02"`
-	HotelID       uuid.UUID   `json:"hotelId" validate:"uuid4"`
-	RoomTypeID    uuid.UUID   `json:"roomTypeId" validate:"uuid4"`
-	ReservationId string      `json:"reservationId" validate:"uuid4"`
+	StartDate     time.Time `json:"startDate"`
+	EndDate       time.Time `json:"endDate"`
+	HotelID       uuid.UUID `json:"hotelId" validate:"uuid4"`
+	RoomTypeID    uuid.UUID `json:"roomTypeId" validate:"uuid4"`
+	ReservationId string    `json:"reservationId" validate:"uuid4"`
 }
 
 func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.UUID, body MakeReservationBody) error {
@@ -32,15 +32,15 @@ func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.U
 	inventory, err := qtx.GetHotelInventoryForRange(ctx, database.GetHotelInventoryForRangeParams{
 		RoomTypeID: body.RoomTypeID,
 		HotelID:    body.HotelID,
-		Date:       time.Time(body.StartDate),
-		Date_2:     time.Time(body.EndDate),
+		Date:       body.StartDate,
+		Date_2:     body.EndDate,
 	})
 
 	if err != nil {
 		return fmt.Errorf("failed to get hotel %q inventory: %w", body.HotelID, err)
 	}
 
-	expectedDays := int(time.Time(body.EndDate).Sub(time.Time(body.StartDate)).Hours()/24) + 1
+	expectedDays := int(body.EndDate.Sub(body.StartDate).Hours()/24) + 1
 	if len(inventory) != expectedDays {
 		return ErrInventoryNotFound
 	}
@@ -67,13 +67,18 @@ func (s *ReservationService) makeReservation(ctx context.Context, guestID uuid.U
 		ID:         reservationUUID,
 		HotelID:    body.HotelID,
 		RoomTypeID: body.RoomTypeID,
-		StartDate:  time.Time(body.StartDate),
-		EndDate:    time.Time(body.EndDate),
+		StartDate:  body.StartDate,
+		EndDate:    body.EndDate,
 		Status:     string(ReservationStatusPending),
 		GuestID:    guestID,
 	})
 
 	if err != nil {
+		// Check for duplicate key violation (primary key constraint on reservation ID)
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") ||
+		   strings.Contains(err.Error(), "reservations_pkey") {
+			return fmt.Errorf("%w: %v", ErrDuplicateReservation, err)
+		}
 		return fmt.Errorf("failed to insert reservation %w", err)
 	}
 
